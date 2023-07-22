@@ -67,9 +67,9 @@ def setup_rq_connection(current_app):
     redis_url = current_app.config.get("RQ_DASHBOARD_REDIS_URL")
     if isinstance(redis_url, string_types):
         current_app.config["RQ_DASHBOARD_REDIS_URL"] = (redis_url,)
-        _, current_app.redis_conn = from_url((redis_url,)[0])
+        _, current_app.redis_conn = from_url((redis_url,)[0], sentinel_options={'password': current_app.config.get('RQ_DASHBOARD_REDIS_PASSWORD')}, client_options={'password': current_app.config.get('RQ_DASHBOARD_REDIS_PASSWORD')})
     elif isinstance(redis_url, (tuple, list)):
-        _, current_app.redis_conn = from_url(redis_url[0])
+        _, current_app.redis_conn = from_url(redis_url[0], sentinel_options={'password': current_app.config.get('RQ_DASHBOARD_REDIS_PASSWORD')}, client_options={'password': current_app.config.get('RQ_DASHBOARD_REDIS_PASSWORD')})
     else:
         raise RuntimeError("No Redis configuration!")
 
@@ -80,7 +80,7 @@ def push_rq_connection():
     if new_instance_number is not None:
         redis_url = current_app.config.get("RQ_DASHBOARD_REDIS_URL")
         if new_instance_number < len(redis_url):
-            _, new_instance = from_url(redis_url[new_instance_number])
+            _, new_instance = from_url(redis_url[new_instance_number], sentinel_options={'password': current_app.config.get('RQ_DASHBOARD_REDIS_PASSWORD')}, client_options={'password': current_app.config.get('RQ_DASHBOARD_REDIS_PASSWORD')})
         else:
             raise LookupError("Index exceeds RQ list. Not Permitted.")
     else:
@@ -256,7 +256,7 @@ def queues_overview(instance_number):
                 "rq_dashboard/queues.html",
                 current_instance=instance_number,
                 instance_list=current_app.config.get("RQ_DASHBOARD_REDIS_URL"),
-                queues=Queue.all(),
+                queues=Queue.all(connection=current_app.redis_conn),
                 rq_url_prefix=url_for(".queues_overview"),
                 rq_dashboard_version=rq_dashboard_version,
                 rq_version=rq_version,
@@ -317,7 +317,7 @@ def jobs_overview(instance_number, queue_name, registry_name, per_page, page):
             "rq_dashboard/jobs.html",
             current_instance=instance_number,
             instance_list=current_app.config.get("RQ_DASHBOARD_REDIS_URL"),
-            queues=Queue.all(),
+            queues=Queue.all(connection=current_app.redis_conn),
             queue=queue,
             per_page=per_page,
             page=page,
@@ -418,7 +418,7 @@ def compact_queue(queue_name):
 @blueprint.route("/<int:instance_number>/data/queues.json")
 @jsonify
 def list_queues(instance_number):
-    queues = serialize_queues(instance_number, sorted(Queue.all()))
+    queues = serialize_queues(instance_number, sorted(Queue.all(connection=current_app.redis_conn)))
     return dict(queues=queues)
 
 

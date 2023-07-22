@@ -248,6 +248,7 @@ def run(
         app.config["RQ_DASHBOARD_REDIS_URL"] = url
 
     setup_rq_connection(app)
+    app.config["RQ_DASHBOARD_REDIS_PASSWORD"] = redis_password
     app.run(host=bind, port=port, debug=debug)
 
 
